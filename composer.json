@@ -1,6 +1,6 @@
 {
   "name": "7workers/bbt-core",
-  "description": "Limited and very basic REST client",
+  "description": "Beautiful Building Tools (core set)",
   "version": "1.0.1",
   "type": "library",
   "license": "MIT",
@@ -11,13 +11,25 @@
     }
   ],
   "require": {
-    "php": ">=7.1",
-    "ext-json": ">=1.2.0",
-    "psr/http-client": "^1.0"
+    "php": ">=8.1",
+    "ext-json": "*",
+    "ext-pcntl": "*",
+    "ext-amqp": "*",
+    "ext-mongodb": "*",
+    "ext-memcached": "*",
+    "ext-curl": "*",
+    "ext-posix": "*",
+    "7workers/petty-rest": "^2.1",
+    "graylog2/gelf-php": "^1.7",
+    "monolog/monolog": "^2.3"
   },
   "autoload": {
     "psr-4": {
       "Bbt\\": "src/"
-    }
-  }
+    },
+    "files": [
+      "src/exceptions.php"
+    ]
+  },
+  "bin": ["bin/bbt-systemd-bulk.sh"]
 }
