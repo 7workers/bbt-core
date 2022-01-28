@@ -1,0 +1,23 @@
+{
+  "name": "7workers/bbt-core",
+  "description": "Limited and very basic REST client",
+  "version": "1.0.1",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Max Deshkevich",
+      "email": "7workers@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.1",
+    "ext-json": ">=1.2.0",
+    "psr/http-client": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Bbt\\": "src/"
+    }
+  }
+}
