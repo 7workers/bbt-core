@@ -70,24 +70,11 @@ abstract class Aspectator
      */
     public static $aspect2graphModeMap = [
         Aspectator::ASPECT__ACTIVE_ACCOUNTS   => 'U',
-        //        Aspectator::ASPECT__PAYING_ACCOUNTS   => '',
-        //        Aspectator::ASPECT__USER_ACTIONS      => '',
-        //        Aspectator::ASPECT__SESSIONS_START    => '',
         Aspectator::ASPECT__SIGNUP_ATTEMPT    => 'H',
-        //        Aspectator::ASPECT__SIGNUP_SUCCESSFUL => '',
-        //        Aspectator::ASPECT__SIGNUP_BLOCKED    => '',
-        //        Aspectator::ASPECT__ACCOUNT_UPGRADES  => '',
         Aspectator::ASPECT__PAYMENT_ATTEMPT   => 'U',
         Aspectator::ASPECT__PAYMENT_FAIL      => 'U',
         Aspectator::ASPECT__PAYMENT_SUCCESS   => 'U',
-        //        Aspectator::ASPECT__EMAIL_OPENS       => '',
-        //        Aspectator::ASPECT__EMAIL_BOUNCES     => '',
-        //        Aspectator::ASPECT__DEVICES           => '',
         Aspectator::ASPECT__FRAUD_REPORTS     => 'U',
-        //        Aspectator::ASPECT__BOT_REPORTS       => '',
-        //        Aspectator::ASPECT__PROXY_DETECTED    => '',
-        //        Aspectator::ASPECT__AGENT_STRINGS     => '',
-        //        Aspectator::ASPECT__IPS_SIGNUPS       => '',
     ];
 
 	public static function getDayStats( \DateInterval $interval, string $idEntity, string $idAspect)

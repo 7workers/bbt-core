@@ -1,4 +1,8 @@
-<?php /** @noinspection PhpMissingReturnTypeInspection */ /** @noinspection PhpMissingFieldTypeInspection */
+<?php /** @noinspection PhpPureAttributeCanBeAddedInspection */
+
+/** @noinspection PhpUnused */
+
+/** @noinspection PhpMissingReturnTypeInspection */ /** @noinspection PhpMissingFieldTypeInspection */
 
 namespace Bbt;
 
@@ -139,7 +143,7 @@ abstract class ApiServer
         $r = new DummyJsonResponse(500);
         try {
             $r->hydrateFromObject($err);
-        } catch (Throwable $e) {
+        } /** @noinspection PhpUnusedLocalVariableInspection */ catch (Throwable $e) {
             die('FATAL:cannot hydrate error');
         }
 
@@ -387,7 +391,7 @@ class DummyFileResponse implements ResponseInterface
     public function withHeader($name, $value){
 
         $new = new self($this->statusCode);
-        $new->stringBody = file_get_contents($this->fname);
+        $new->fname = $this->fname;
         $new->arHeaders = $this->arHeaders;
         $new->arHeaders[$name] = $value;
 
