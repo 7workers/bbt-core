@@ -1,4 +1,6 @@
-<?php namespace Bbt;
+<?php /** @noinspection PhpUnused */
+
+namespace Bbt;
 
 use PettyRest\Client;
 use PettyRest\Request;
