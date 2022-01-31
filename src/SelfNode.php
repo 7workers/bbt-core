@@ -42,7 +42,7 @@ abstract class SelfNode
 
         $response = self::getClient()->sendRequest($r);
 
-        return @$response->value;
+        return $response->value ?? null;
     }
 
     /**
@@ -63,7 +63,7 @@ abstract class SelfNode
 
         $response = self::getClient()->sendRequest($r);
 
-        return @$response->value;
+        return $response->value ?? null;
     }
 
     protected static function getClient(): Client
