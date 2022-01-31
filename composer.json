@@ -1,7 +1,7 @@
 {
   "name": "7workers/bbt-core",
   "description": "Beautiful Building Tools (core set)",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "library",
   "license": "MIT",
   "authors": [

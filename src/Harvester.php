@@ -194,7 +194,6 @@ abstract class Harvester extends CliScript
         if (false === $pos) {
             throw new ExceptionHarvester('needle not found in cutBefore():' . $needle);
         }
-
 		$content = substr($content, $pos);
 
 		return $content;
