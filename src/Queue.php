@@ -26,16 +26,28 @@ class Queue
      */
     public static $arLocalQueues = [];
 
+    public static function sendDataToSelfNode($queueName, $data) :void
+    {
+        self::sendRawDataToSelfNode($queueName, base64_encode(serialize($data)));
+    }
+
     public static function sendData($queueName, $data) :void
-	{
-		self::sendRawData($queueName, base64_encode(serialize($data)));
-	}
+    {
+        self::sendRawData($queueName, base64_encode(serialize($data)));
+    }
+
+    public static function sendRawDataToSelfNode($queueName, string $data, ?array $headers=[]) :void
+    {
+        SelfNode::sendQueueData($queueName, $data, $headers);
+    }
 
     public static function sendRawData($queueName, string $data, ?array $headers=[]) :void
-	{
+    {
         $attributes = [];
 
         if (!empty($headers)) $attributes['headers'] = $headers;
+
+
 
         if (true !== self::$enabledForwardToSelfNode || in_array($queueName, self::$arLocalQueues)) {
             self::getAmqpExchange()->publish($data, $queueName, AMQP_NOPARAM, $attributes);
@@ -43,8 +55,7 @@ class Queue
         }
 
         SelfNode::sendQueueData($queueName, $data, $headers);
-	}
-
+    }
 
     /**
      * Schedule workload for later processing, see \Bbt\QueueScheduler2
@@ -77,36 +88,36 @@ class Queue
         SelfNode::sendQueueData(self::SCHEDULER2, $data, $attributes['headers']);
     }
 
-	public static function sendDataRouted( string $exchangeName, $data, ?string $key=null, ?int $ttlSeconds=null )
-	{
-		$exchange = self::getExchange($exchangeName);
+    public static function sendDataRouted( string $exchangeName, $data, ?string $key=null, ?int $ttlSeconds=null )
+    {
+        $exchange = self::getExchange($exchangeName);
 
-		$dFlags = [];
+        $dFlags = [];
 
-		if( null!==$ttlSeconds )
-		{
-			$dFlags['expiration'] = 1000 * $ttlSeconds;
-		}
+        if( null!==$ttlSeconds )
+        {
+            $dFlags['expiration'] = 1000 * $ttlSeconds;
+        }
 
-		$exchange->publish(base64_encode(serialize($data)), $key, AMQP_NOPARAM, $dFlags);
-	}
+        $exchange->publish(base64_encode(serialize($data)), $key, AMQP_NOPARAM, $dFlags);
+    }
 
-	public static function getExchange( string $exchangeName ) :AMQPExchange
-	{
-		static $cached = [];
+    public static function getExchange( string $exchangeName ) :AMQPExchange
+    {
+        static $cached = [];
 
-		if( isset($cached[$exchangeName]) ) return $cached[$exchangeName];
+        if( isset($cached[$exchangeName]) ) return $cached[$exchangeName];
 
-		$exchange = new AMQPExchange(self::getAmqpChannel());
-		$exchange->setType(AMQP_EX_TYPE_DIRECT);
-		$exchange->setName($exchangeName);
-		$exchange->setFlags(AMQP_DURABLE);
-		$exchange->declareExchange();
+        $exchange = new AMQPExchange(self::getAmqpChannel());
+        $exchange->setType(AMQP_EX_TYPE_DIRECT);
+        $exchange->setName($exchangeName);
+        $exchange->setFlags(AMQP_DURABLE);
+        $exchange->declareExchange();
 
-		$cached[$exchangeName] = $exchange;
+        $cached[$exchangeName] = $exchange;
 
-		return $exchange;
-	}
+        return $exchange;
+    }
 
     /**
      * Schedule workload for later processing
@@ -119,21 +130,26 @@ class Queue
     {
         if( $tsOrDelay < 2000000 ) $tsOrDelay = time() + $tsOrDelay;
 
+        if( true === self::$enabledForwardToSelfNode  && !in_array($queueName, self::$arLocalQueues) ) {
+            self::sendDataToSelfNode(self::SCHEDULER, [ $queueName, $tsOrDelay, $workload ]);
+            return;
+        }
+
         self::sendData(self::SCHEDULER, [ $queueName, $tsOrDelay, $workload ]);
     }
 
     public static function scheduleRoutedWorkload( string $exchangeName, $routingKey, $workload, int $tsOrDelay ) :void
     {
-	    if( $tsOrDelay < 2000000 ) $tsOrDelay = time() + $tsOrDelay;
+        if( $tsOrDelay < 2000000 ) $tsOrDelay = time() + $tsOrDelay;
 
-	    self::sendData(self::SCHEDULER, [ $exchangeName.'/'.$routingKey, $tsOrDelay, $workload ]);
+        self::sendData(self::SCHEDULER, [ $exchangeName.'/'.$routingKey, $tsOrDelay, $workload ]);
     }
 
-	public static function getData($queueName, $waitTimeoutSeconds=0)
-	{
-		$q = self::getAmqpQueue($queueName);
+    public static function getData($queueName, $waitTimeoutSeconds=0)
+    {
+        $q = self::getAmqpQueue($queueName);
 
-		$tsExit = time() + $waitTimeoutSeconds;
+        $tsExit = time() + $waitTimeoutSeconds;
 
         do {
             /** @noinspection PhpAssignmentInConditionInspection */
@@ -146,9 +162,9 @@ class Queue
 
             usleep(600000);
         } while (true);
-	}
+    }
 
-	public static function getAmqpQueueNewConnectionWithTimeout($queueName, $timeout=1)
+    public static function getAmqpQueueNewConnectionWithTimeout($queueName, $timeout=1)
     {
         $ch = new AMQPChannel(self::getNewAmqpConnectionWithTimeout($timeout));
 
@@ -160,17 +176,17 @@ class Queue
         return $q;
     }
 
-	/**
-	 * @param $queueName
-	 *
-	 * @return AMQPQueue
-	 * @throws \AMQPChannelException
-	 * @throws \AMQPConnectionException
-	 * @throws \AMQPQueueException
-	 */
-	public static function getAmqpQueue($queueName)
-	{
-		static $arQueues;
+    /**
+     * @param $queueName
+     *
+     * @return AMQPQueue
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPQueueException
+     */
+    public static function getAmqpQueue($queueName)
+    {
+        static $arQueues;
 
         if ( !isset($arQueues[$queueName])) {
             $ch = self::getAmqpChannel();
@@ -184,21 +200,21 @@ class Queue
         } else {
             $q = $arQueues[$queueName];
         }
-	
-		return $q;
-	}
 
-	public static function getAmqpChannel()
-	{
-		static $channel;
+        return $q;
+    }
 
-		if( !is_null($channel)) return $channel;
+    public static function getAmqpChannel()
+    {
+        static $channel;
 
-		$cnn = self::getAmqpConnection();
-		$channel = new AMQPChannel($cnn);
+        if( !is_null($channel)) return $channel;
 
-		return $channel;
-	}
+        $cnn = self::getAmqpConnection();
+        $channel = new AMQPChannel($cnn);
+
+        return $channel;
+    }
 
     public static function getAmqpExchange(): AMQPExchange
     {
@@ -212,7 +228,7 @@ class Queue
         return $amqpExchange;
     }
 
-	public static function getNewAmqpConnectionWithTimeout($timeout=1):AMQPConnection
+    public static function getNewAmqpConnectionWithTimeout($timeout=1):AMQPConnection
     {
         $cfg = self::$server;
         $cfg['read_timeout'] = $timeout;
@@ -223,7 +239,7 @@ class Queue
         return $cnn;
     }
 
-	public static function getAmqpConnection():AMQPConnection
+    public static function getAmqpConnection():AMQPConnection
     {
         static $cnn;
 
@@ -235,31 +251,31 @@ class Queue
         return $cnn;
     }
 
-	public static function getQueueCount($queueName)
-	{
-		if( !isset(self::$arQueues[$queueName]) )
-		{
-			$ch = self::getAmqpChannel();
+    public static function getQueueCount($queueName)
+    {
+        if( !isset(self::$arQueues[$queueName]) )
+        {
+            $ch = self::getAmqpChannel();
 
-			$q = new AMQPQueue($ch);
-			$q->setName($queueName);
-			$q->setFlags(AMQP_NOPARAM);
+            $q = new AMQPQueue($ch);
+            $q->setName($queueName);
+            $q->setFlags(AMQP_NOPARAM);
 
-			self::$arQueues[$queueName] = $q;
-		}
-		else
-		{
-			$q = self::$arQueues[$queueName];
-		}
+            self::$arQueues[$queueName] = $q;
+        }
+        else
+        {
+            $q = self::$arQueues[$queueName];
+        }
 
-		return $q->declareQueue();
-	}
+        return $q->declareQueue();
+    }
 
-	public static function skipMessages($nofMessagesToSkip, $queueName)
-	{
-		for( ; $nofMessagesToSkip > 0; $nofMessagesToSkip--)
-		{
-			self::getData($queueName);
-		}
-	}
+    public static function skipMessages($nofMessagesToSkip, $queueName)
+    {
+        for( ; $nofMessagesToSkip > 0; $nofMessagesToSkip--)
+        {
+            self::getData($queueName);
+        }
+    }
 }
