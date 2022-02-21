@@ -238,6 +238,26 @@ function set_obj_from_array($o, array $a): void
     }
 }
 
+function hydrateFromJsonString(object $o, string $json): void
+{
+    $arr = json_decode($json, false);
+
+    foreach (get_object_vars($arr) as $k => $v) {
+        if (!property_exists($o, $k))  continue;
+
+        if (is_object($v)) {
+            if (is_array($o->{$k})) {
+                foreach (get_object_vars($v) as $k2 => $v2) {
+                    $o->{$k}[$k2] = $v2;
+                }
+                continue;
+            }
+        }
+
+        $o->{$k} = $v;
+    }
+}
+
 function json2mongoQuery( string $json ) :?array
 {
 	$query = json_decode($json, true);
