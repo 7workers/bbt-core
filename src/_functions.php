@@ -383,7 +383,7 @@ function json2ifCondition(string $json): ?string
 
             if (isset($arConditionParts['$exists']) && is_bool($arConditionParts['$exists'])) {
 
-                if( preg_match('/\[([^]]+)\]$/', $key, $matches) ) {
+                if( preg_match('/\[([^]]+)]$/', $key, $matches) ) {
                     $keyChecking = $matches[1];
                     $arrayChecking = substr($key, 0, -(2+strlen($keyChecking)));
                     $arNestedConditions[] = ($arConditionParts['$exists'] ? '' : '!')."array_key_exists({$keyChecking},(array){$arrayChecking})";
@@ -514,4 +514,44 @@ function ip2searchable($ip): string
     }
 
     return $ip;
+}
+
+trait Hydratable {
+    public function hydrate(mixed $d)
+    {
+        $ref = new \ReflectionClass($this);
+        $properties = $ref->getProperties();
+
+        foreach ($properties as $prop_each) {
+            $name = $prop_each->getName();
+            if( is_array($d) && !isset($d[$name])) continue;
+            if( is_object($d) && !isset($d->{$name})) continue;
+
+            $val = is_object($d) ? $d->{$name} : $d[$name];
+
+            if( $prop_each->getType()->isBuiltin() ) {
+                $this->{$name} = $val;
+                continue;
+            }
+
+            $type = $prop_each->getType()->getName();
+
+            if( $type == 'MongoDB\BSON\ObjectId' ) {
+                $this->{$name} = new $type((string)$val);
+                continue;
+            }
+
+            $this->{$name} = new $type();
+
+            if( method_exists($type, 'hydrate') ) {
+                $this->{$name}->hydrate($val);
+                continue;
+            }
+
+            foreach ($val as $n => $m) {
+                if( !property_exists($this->{$name}, $n) ) continue;
+                $this->{$name}->{$n} = $m;
+            }
+        }
+    }
 }

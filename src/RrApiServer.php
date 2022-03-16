@@ -21,7 +21,7 @@ abstract class RrApiServer extends ApiServer
     {
         $rrt->request = $this->rrPSR7Worker->waitRequest();
 
-        return true;
+        return $rrt->request !== null;
     }
 
     protected function emitResponse(RequestResponseTrace  $rrt):void
