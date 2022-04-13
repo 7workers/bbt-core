@@ -69,16 +69,10 @@ function md5_base64($string)
 
 function createMongoId( int $timestamp ) :string 
 {
-    $ts    = pack('N', $timestamp);
-    $m     = substr(md5(gethostname()), 0, 3);
-
-    $bin = sprintf("%s%s%s%s", $ts, $m, pack('n', 0), substr(pack('N', 0), 1, 3));
-
+    $bin = sprintf("%s", pack('N', $timestamp));
     $id = '';
-
-    for ($i = 0; $i < 12; $i++ ) $id .= sprintf("%02X", ord($bin[$i]));
-
-    return $id;
+    for ($i = 0; $i < 4; $i++ ) $id .= sprintf("%02X", ord($bin[$i]));
+    return $id.'0000000000000000';
 }
 
 function translate_text( string $text, string $apiKey ) :?string
