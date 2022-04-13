@@ -69,14 +69,10 @@ function md5_base64($string)
 
 function createMongoId( int $timestamp ) :string 
 {
-    static $inc = 0;
-
     $ts    = pack('N', $timestamp);
     $m     = substr(md5(gethostname()), 0, 3);
-    $pid   = pack('n', posix_getpid());
-    $trail = substr(pack('N', $inc++), 1, 3);
 
-    $bin = sprintf("%s%s%s%s", $ts, $m, $pid, $trail);
+    $bin = sprintf("%s%s%s%s", $ts, $m, pack('n', 0), substr(pack('N', 0), 1, 3));
 
     $id = '';
 
