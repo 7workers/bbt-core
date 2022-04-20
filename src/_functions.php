@@ -67,12 +67,12 @@ function md5_base64($string)
 	return str_replace(['+','/','='],['-','_',''],base64_encode(md5($string,true)));
 }
 
-function createMongoId( int $timestamp ) :string 
+function createMongoId( int $timestamp, ?bool $upperLimit=false ) :string
 {
     $bin = sprintf("%s", pack('N', $timestamp));
     $id = '';
     for ($i = 0; $i < 4; $i++ ) $id .= sprintf("%02X", ord($bin[$i]));
-    return $id.'0000000000000000';
+    return $id . ($upperLimit ? 'ffffffffffffffff' : '0000000000000000');
 }
 
 function translate_text( string $text, string $apiKey ) :?string
