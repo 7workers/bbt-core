@@ -408,6 +408,7 @@ function json2ifCondition(string $json): ?string
         }
         return ($priority_a < $priority_b) ? -1 : 1;
     });
+
     return implode(' && ', $arIfParts);
 }
 
