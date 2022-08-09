@@ -280,109 +280,82 @@ function json2mongoQuery( string $json ) :?array
 
 function json2ifCondition(string $json): ?string
 {
-    //$json  = preg_replace('/(:\\s*)(\\/.+\\/)([iu]{0,3})(\\s*[},])/', '\1 "~__REGEX:\2 ~__MOD:\3" \4', $json);
-
     $dJson = json_decode($json, true);
-
     if( null===$dJson ) throw new RuntimeException('error parsing json');
-
     $arIfParts      = [];
     $variablePrefix = '$case->';
-
     foreach( $dJson as $key => $value ) {
-
         $suppressWarning = '';
-
         $posPoint = strpos($key, '.');
-
         if ($posPoint !== false) {
             $suppressWarning = '@';
-
             $key = substr($key, 0, $posPoint).'[\''.substr($key, $posPoint + 1).'\']';
             $key = str_replace('.', '\'][\'', $key);
         }
-
         if( $key === '$or' ) {
             throw new RuntimeException('$or not supported');
         }
-
         $key = $suppressWarning.$variablePrefix.$key;
-
         if (is_array($value)) {
-
             $arConditionParts = $value;
             $arNestedConditions = [];
-
+            if (isset($arConditionParts['$all']) && is_array($arConditionParts['$all'])) {
+                if ($arConditionParts['$all'] === []) {
+                    throw new RuntimeException('$all array empty');
+                }
+                $arConditionParts['$all'] = array_unique($arConditionParts['$all']);
+                $arHaystack = '[\''.implode("','", $arConditionParts['$all']).'\']';
+                $arNestedConditions[] = '((is_array('.$key.')) ? (count(array_unique(array_intersect('.$key.', '.$arHaystack.'))) === count('.$arHaystack.')) : false )';
+            }
             if (isset($arConditionParts['$in']) && is_array($arConditionParts['$in'])) {
                 $arHaystack = '[\''.implode("','", $arConditionParts['$in']).'\']';
-
-                $arNestedConditions[] = 'in_array('.$key.','.$arHaystack.')';
+                $arNestedConditions[] = '(is_array('.$key.') ? count(array_intersect('.$key.', '.$arHaystack.')) : in_array('.$key.', '.$arHaystack.'))';
             }
-
             if (isset($arConditionParts['$gt']) && is_int($arConditionParts['$gt'])) {
                 $arNestedConditions[] = $key.'>'.$arConditionParts['$gt'];
             }
-
             if (isset($arConditionParts['$gte']) && is_int($arConditionParts['$gte'])) {
                 $arNestedConditions[] = $key.'>='.$arConditionParts['$gte'];
             }
-
             if (isset($arConditionParts['$lt']) && is_int($arConditionParts['$lt'])) {
                 $arNestedConditions[] = $key.'<'.$arConditionParts['$lt'];
             }
-
             if (isset($arConditionParts['$lte']) && is_int($arConditionParts['$lte'])) {
                 $arNestedConditions[] = $key.'<='.$arConditionParts['$lte'];
             }
-
             if (isset($arConditionParts['$nin']) && is_array($arConditionParts['$nin'])) {
                 $arHaystack = '[\''.implode("','", $arConditionParts['$nin']).'\']';
-
-                $arNestedConditions[] = '!in_array('.$key.','.$arHaystack.')';
+                $arNestedConditions[] = '!(is_array('.$key.') ? count(array_intersect('.$key.', '.$arHaystack.')) : in_array('.$key.', '.$arHaystack.'))';
             }
-
             if (isset($arConditionParts['$regex']) && is_string($arConditionParts['$regex'])) {
                 $pattern   = str_replace('~', '\\\\~', $arConditionParts['$regex']);
                 $modifiers = $arConditionParts['$options'] ?? '';
-
                 $arNestedConditions[] = "preg_match('~{$pattern}~{$modifiers}',$key??'')";
             }
-
             if (isset($arConditionParts['$elemMatch']) && is_array($arConditionParts['$elemMatch'])) {
                 if(array_diff( array_keys($arConditionParts['$elemMatch']), ['$eq', '$ne'])) {
                     throw new RuntimeException('only support $eq and $ne in $elemMatch');
                 }
-
                 if (isset($arConditionParts['$elemMatch']['$eq'])) {
                     $eqElemMatch = $arConditionParts['$elemMatch']['$eq'];
-
                     if( is_string($eqElemMatch) ) $eqElemMatch = "'{$eqElemMatch}'";
-
                     $arNestedConditions[] = 'in_array('.$eqElemMatch.',(array)'.$key.')';
                 }
-
                 if (isset($arConditionParts['$elemMatch']['$ne'])) {
                     $eqElemMatch = $arConditionParts['$elemMatch']['$ne'];
-
                     if( is_string($eqElemMatch) ) $eqElemMatch = "'{$eqElemMatch}'";
-
                     $arNestedConditions[] = '!in_array('.$eqElemMatch.',(array)'.$key.')';
                 }
-
             }
-
             if (isset($arConditionParts['$exists']) && is_bool($arConditionParts['$exists'])) {
-
-                if( preg_match('/\[([^]]+)]$/', $key, $matches) ) {
+                if( preg_match('/\[([^]]+)\]$/', $key, $matches) ) {
                     $keyChecking = $matches[1];
                     $arrayChecking = substr($key, 0, -(2+strlen($keyChecking)));
                     $arNestedConditions[] = ($arConditionParts['$exists'] ? '' : '!')."array_key_exists({$keyChecking},(array){$arrayChecking})";
                 }
             }
-
             if (array_key_exists('$ne', $arConditionParts)) {
                 $compareValue = $arConditionParts['$ne'];
-
                 if (null === $compareValue) {
                     $compareValue_if = '!==null';
                 } elseif (is_int($compareValue)) {
@@ -390,11 +363,8 @@ function json2ifCondition(string $json): ?string
                 } else {
                     $compareValue_if = '!==\''.str_replace("'", "\\'", $compareValue).'\'';
                 }
-
                 $arNestedConditions[] = $key.$compareValue_if;
             }
-
-
             if( empty($arNestedConditions) ) {
                 if( substr(key($arConditionParts),0,1)==='$' ) {
                     throw new RuntimeException('error parsing condition part: '.json_encode($arConditionParts));
@@ -406,42 +376,38 @@ function json2ifCondition(string $json): ?string
                 $arIfParts[] = implode(' && ', $arNestedConditions);
                 continue;
             }
-
-        } elseif( null === $value ) {
-            $arIfParts[] = $key.'===null';
+        }
+        elseif( null === $value ) {
+            $arIfParts[] = '(is_array('.$key.') ? (in_array(null, '.$key.', true) )  : ('.$key.' === null))';
             continue;
         } elseif ( is_int($value) ) {
-            $arIfParts[] = $key.'==='.$value.'';
+            $arIfParts[] = ' (is_array('.$key.') ?  in_array('.$value.', '.$key.', true)  : '.$key.' === '.$value.')';
             continue;
         } elseif ( is_bool($value) ) {
-            $arIfParts[] = $key.'==='.($value?'true':'false').'';
+            $arIfParts[] = ' (is_array('.$key.') ? in_array('.($value?'true':'false').', '.$key.', true) : '.$key.' === '.($value?'true':'false').')';
             continue;
         } else {
-            $arIfParts[] = $key.'===\''.str_replace("'", "\\'", $value).'\'';
+            $value = str_replace("'", "\\'", $value);
+            $arIfParts[] =  ' (is_array('.$key.') ?  in_array(\''.$value.'\', '.$key.', true)  : '.$key.' === \''.$value.'\')';
             continue;
         }
     }
-
     usort($arIfParts, static function ($a, $b) {
-
         static $arPriorities = [
-            '===null'    => 0,
-            ']['         => 20,
-            'in_array'   => 70,
-            'preg_match' => 100,
+            '===null'       => 0,
+            ']['            => 20,
+            'in_array'      => 70,
+            'array_intersect' => 90,
+            'preg_match'    => 100,
         ];
-
         $priority_a = 10;
         $priority_b = 10;
-
         foreach ($arPriorities as $needle => $priority) {
             if (strpos($a, $needle) !== false) $priority_a = $priority;
             if (strpos($b, $needle) !== false) $priority_b = $priority;
         }
-
         return ($priority_a < $priority_b) ? -1 : 1;
     });
-
     return implode(' && ', $arIfParts);
 }
 
