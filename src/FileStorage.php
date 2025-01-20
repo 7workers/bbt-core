@@ -131,25 +131,33 @@ abstract class FileStorage
      * @return ObjectID
      * @throws FileStorageException
      */
-    public static function moveAndSave( string $fnameTmp, MongoDbCollection $collection, ?array $dFile=[] ) :ObjectID
-    {
-        if( !file_exists($fnameTmp) )       throw new FileStorageException('file not exists: '.$fnameTmp);
+     public static function moveAndSave( string $fnameTmp, MongoDbCollection $collection, ?array $dFile=[] ) :ObjectID
+     {
+         if( !file_exists($fnameTmp) ) throw new FileStorageException('file not exists: '.$fnameTmp);
 
-		$res = $collection->insertOne($dFile);
+         $res = $collection->insertOne($dFile);
 
-		if( $res->getInsertedCount()!==1 )  throw new FileStorageException('error writing database record for file='.$fnameTmp);
+         if( $res->getInsertedCount()!==1 )  throw new FileStorageException('error writing database record for file='.$fnameTmp);
 
-		$idFile = $res->getInsertedId();
+         try {
+             $idFile = $res->getInsertedId();
 
-		$fnameStored = self::getFnameById(strval($idFile), $collection->getCollectionName());
+             $fnameStored = self::getFnameById((string)$idFile, $collection->getCollectionName());
 
-        self::ensureNestedDirs($fnameStored);
+             self::ensureNestedDirs($fnameStored);
 
-		copy($fnameTmp, $fnameStored);
-		unlink($fnameTmp);
+             if (copy($fnameTmp, $fnameStored) === false) {
+                 throw new FileStorageException("failed to copy file $fnameTmp to $fnameStored");
+             }
 
-		return $idFile;
-    }
+             unlink($fnameTmp);
+         } catch (FileStorageException $e) {
+             $collection->deleteById($idFile);
+             throw $e;
+         }
+
+         return $idFile;
+     }
 
 	/**
 	 * @param string $fnameLocal
