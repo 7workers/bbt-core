@@ -139,6 +139,7 @@ abstract class ApiServer
         $err = new class(){};
 
         $err->error = $e->getMessage();
+        $err->code = $e->getCode();
 
         $r = new DummyJsonResponse(500);
         try {
