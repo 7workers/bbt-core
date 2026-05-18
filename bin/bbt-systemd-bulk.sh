@@ -12,7 +12,7 @@ check_units()
 
   for i in "${services[@]}"
   do
-    serviceStatus=$(systemctl --user status "$i" 2>/dev/null | sed -n '3 p')
+    serviceStatus=$(systemctl --user status "$i" 2>/dev/null | grep -m1 '^[[:space:]]*Active:')
 
     if [ -z "${serviceStatus}" ]
     then
