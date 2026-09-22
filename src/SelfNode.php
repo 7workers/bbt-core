@@ -77,6 +77,7 @@ abstract class SelfNode
                 protected function getExceptionClass(\Throwable $e): string {return ExternalApiError::class;}
             };
             $client->forceScheme = 'http';
+            $client->timeout = 2;
         }
 
         return $client;
